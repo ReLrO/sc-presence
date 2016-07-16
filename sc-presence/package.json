@@ -9,8 +9,8 @@
       "email": "rob@coinigy.com"
     }
   ],
-  "dependencies": { 
-    "mysql": ">=1.8.0",
+  "dependencies": {
+    "pg": ">=6.0.2",
     "socketcluster": ">=2.3.x",
     "socketcluster-client": ">=2.3.x"
   },
@@ -19,7 +19,7 @@
     "socketcluster",
     "users",
     "online",
-    "mysql"
+    "pg"
   ],
   "readmeFilename": "README.md"
 }

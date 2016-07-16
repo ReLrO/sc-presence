@@ -2,20 +2,20 @@
 var pool;
 var pool_connection;
 var options;
-var mysql = require("mysql");
+var pg = require("pg");
 
 
 module.exports.connect = function (in_options) {
     options = in_options;
-    pool = mysql.createPool(options);
+    pool = new pg.Pool(options);
     tryConnect();
 }
 
 
 
 function tryConnect()
-{      
-    pool.getConnection(function (error, connection) {
+{
+    pool.connect(function (error, connection) {
         if (error) {
             console.log(error);
             setTimeout(function () { tryConnect(); }, 15000);
