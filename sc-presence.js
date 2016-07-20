@@ -1,4 +1,4 @@
-﻿
+
 var scPresenceData = require('./sc-presence-data.js');
 var scPresenceDbconn = require('./sc-presence-dbconn.js');
 
@@ -23,7 +23,8 @@ module.exports.scPresenceConfig = {
     scpDbuser					: "SCP_user",
     scpDbpassword				: "besuretosetpasswordinworker",
     scpConnectUpdateDelay		: 3000,
-    scpUserIdField              : "user_id"
+    scpUserIdField              : "user_id",
+    scpDbport                   : 5432
 };
 
 module.exports.scWorker;
@@ -90,6 +91,7 @@ module.exports.attach = function (worker, startupConfig, callback) {
             user     : config.scpDbuser,
             password : config.scpDbpassword,
             database : config.scpDbname,
+            port     : config.scpDbport
         });
 
 

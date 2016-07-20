@@ -1,4 +1,4 @@
-﻿
+
 var pool;
 var pool_connection;
 var options;

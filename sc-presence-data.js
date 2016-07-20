@@ -1,3 +1,4 @@
+'use strict';
 ﻿module.exports.presenceConfig;
 
 module.exports.insertUserChannel = function (connection, socket, channel, callback) {
@@ -5,13 +6,12 @@ module.exports.insertUserChannel = function (connection, socket, channel, callba
         var user_id = null;
         var user_authToken = null;
         var user_origin = null;
-        
-        var authToken = socket.getAuthToken();
-        if (authToken != null && typeof authToken == 'object') {            
-                user_id = authToken[module.exports.presenceConfig.scpUserIdField];
-                user_authToken = JSON.stringify(authToken);            
-        }             
 
+        var authToken = socket.getAuthToken();
+        if (authToken != null && typeof authToken == 'object') {
+                user_id = authToken[module.exports.presenceConfig.scpUserIdField];
+                user_authToken = JSON.stringify(authToken);
+        }
         var insertParams = [
              socket.id
             ,user_id
@@ -19,18 +19,14 @@ module.exports.insertUserChannel = function (connection, socket, channel, callba
             ,user_authToken
             ,socket.remoteAddress
             ,socket.request.headers.origin
-        ];        
-        
-        var onDuplicateParams = {            
-             SCP_authToken  : user_authToken
-            ,SCP_ip         : socket.remoteAddress
-            ,SCP_origin     : socket.request.headers.origin
-            ,SCP_user_id    : user_id
-        };
-        
-        execSQL("INSERT INTO `" + module.exports.presenceConfig.scpDbTablename + "` (SCP_socket_id, SCP_user_id, SCP_channel, SCP_authToken, SCP_ip, SCP_origin, SCP_updated) " +
-                "VALUES(?, NOW()) ON DUPLICATE KEY UPDATE ?; ", connection, [insertParams, onDuplicateParams], callback); 
-                
+        ];
+
+
+        execSQL("INSERT INTO " + module.exports.presenceConfig.scpDbTablename + " (SCP_socket_id, SCP_user_id, SCP_channel, SCP_authToken, SCP_ip, SCP_origin, SCP_updated) " +
+                "VALUES($1, $2, $3, $4, $5, $6, NOW()) ON CONFLICT (SCP_user_id, SCP_channel, SCP_socket_id) DO UPDATE SET SCP_authToken = $4, SCP_ip = $5, SCP_origin=$6, SCP_user_id=$2", connection, insertParams, callback);
+
+
+
     }
 }
 
@@ -38,14 +34,14 @@ module.exports.insertUserChannel = function (connection, socket, channel, callba
 
 
 
-module.exports.removeUserChannel = function (connection, socket, channel, callback) {   
-            
+module.exports.removeUserChannel = function (connection, socket, channel, callback) {
+
     var params = [
-         socket.id        
+         socket.id
         ,channel
     ];
-
-    execSQL("DELETE FROM  `" + module.exports.presenceConfig.scpDbTablename + "`  WHERE SCP_socket_id = ? AND SCP_channel = ? ;", connection, params, callback);
+    // console.log(module.exports.presenceConfig.scpDbTablename);
+    execSQL("DELETE FROM " + module.exports.presenceConfig.scpDbTablename + " WHERE SCP_socket_id = $1 AND SCP_channel = $2 ;", connection, params, callback);
 }
 
 
@@ -57,31 +53,31 @@ module.exports.updatePresencePing = function (connection, socket, presenceChanne
         var user_authToken = null;
 
         var authToken = socket.getAuthToken();
-        
+
         if (authToken != null) {
             user_id = authToken[module.exports.presenceConfig.scpUserIdField];
             user_authToken = JSON.stringify(authToken);
         }
-        
-        var params = [           
+
+        var params = [
            user_authToken
           ,user_id
-          ,socket.id                    
+          ,socket.id
           ,presenceChannel
         ];
-        
-        execSQL("UPDATE  `" + module.exports.presenceConfig.scpDbTablename + "`  SET SCP_updated = NOW(), SCP_authToken = ?, SCP_user_id = ? " + 
-                "WHERE SCP_socket_id = ? AND SCP_channel = ?;", 
-                connection, params, function () { 
-        
-                        var params = [                           
+
+        execSQL("UPDATE  " + module.exports.presenceConfig.scpDbTablename + "  SET SCP_updated = NOW(), SCP_authToken = $1, SCP_user_id = $2 " +
+                "WHERE SCP_socket_id = $3 AND SCP_channel = $4;",
+                connection, params, function () {
+
+                        var params = [
                             user_authToken
-                           ,socket.id                           
+                           ,socket.id
                            ,channels
                         ];
 
-                        execSQL("UPDATE  `" + module.exports.presenceConfig.scpDbTablename + "`  SET SCP_updated = NOW(), SCP_authToken = ? " + 
-                                "WHERE SCP_socket_id = ? AND FIND_IN_SET(SCP_channel, ?);",
+                        execSQL("UPDATE  " + module.exports.presenceConfig.scpDbTablename + "  SET SCP_updated = NOW(), SCP_authToken = $1 " +
+                                "WHERE SCP_socket_id = $2 AND FIND_IN_SET(SCP_channel, $3);",
                                 connection, params, callback);
         });
     }
@@ -95,9 +91,9 @@ module.exports.getSocketcount = function (connection, scpPresenceChannel, active
     var params = [
         scpPresenceChannel,
         activeUserThreshold
-    ];  
-  
-    execSQL("SELECT COUNT(*) AS active_users FROM  `" + module.exports.presenceConfig.scpDbTablename + "`  up WHERE SCP_channel = ? AND SCP_updated >= DATE_ADD(NOW(), INTERVAL -? SECOND);", connection, params, callback);
+    ];
+
+    execSQL("SELECT COUNT(*) AS active_users FROM  " + module.exports.presenceConfig.scpDbTablename + "  up WHERE SCP_channel = $1 AND SCP_updated >= DATE_ADD(NOW(), INTERVAL -$2 SECOND);", connection, params, callback);
 }
 
 
@@ -105,13 +101,13 @@ module.exports.getSocketcount = function (connection, scpPresenceChannel, active
 
 
 module.exports.getUsercount = function (connection, activeUserThreshold, callback) {
-    
-    var params = [        
+
+    var params = [
         activeUserThreshold
     ];
-    
-    execSQL("SELECT COUNT(*) AS active_users FROM (SELECT CASE WHEN SCP_user_id IS NULL THEN -1 ELSE SCP_user_id END AS user_id, COUNT(*) FROM `" + 
-            module.exports.presenceConfig.scpDbTablename + "` WHERE SCP_user_id IS NULL GROUP BY user_id) AS a", connection, params, callback);
+
+    execSQL("SELECT COUNT(*) AS active_users FROM (SELECT CASE WHEN SCP_user_id IS NULL THEN -1 ELSE SCP_user_id END AS user_id, COUNT(*) FROM " +
+            module.exports.presenceConfig.scpDbTablename + " WHERE SCP_user_id IS NULL GROUP BY user_id) AS a", connection, params, callback);
 }
 
 
@@ -120,20 +116,20 @@ module.exports.getUsercount = function (connection, activeUserThreshold, callbac
 
 
 module.exports.getSubscriptioncount = function (connection, activeUserThreshold, callback) {
-    
-    var params = [        
+
+    var params = [
         activeUserThreshold
     ];
-    
-    execSQL("SELECT COUNT(*) AS active_users FROM  `" + module.exports.presenceConfig.scpDbTablename + "`  up WHERE SCP_updated >= DATE_ADD(NOW(), INTERVAL -? SECOND);", connection, params, callback);
+
+    execSQL("SELECT COUNT(*) AS active_users FROM  " + module.exports.presenceConfig.scpDbTablename + "  up WHERE SCP_updated >= DATE_ADD(NOW(), INTERVAL -$1 SECOND);", connection, params, callback);
 }
 
 
 
 
-module.exports.getSocketData = function (connection, activeUserThreshold, callback) {    
-    var params = [activeUserThreshold];    
-    execSQL("SELECT * FROM  `" + module.exports.presenceConfig.scpDbTablename + "`  WHERE SCP_updated > DATE_ADD(NOW(), INTERVAL -? SECOND) ORDER BY SCP_user_id, SCP_socket_id, SCP_channel DESC;", connection, params, callback);
+module.exports.getSocketData = function (connection, activeUserThreshold, callback) {
+    var params = [activeUserThreshold];
+    execSQL("SELECT * FROM  " + module.exports.presenceConfig.scpDbTablename + "  WHERE SCP_updated > DATE_ADD(NOW(), INTERVAL -$1 SECOND) ORDER BY SCP_user_id, SCP_socket_id, SCP_channel DESC;", connection, params, callback);
 }
 
 
@@ -141,8 +137,8 @@ module.exports.getSocketData = function (connection, activeUserThreshold, callba
 
 
 module.exports.presenceGC = function (connection, GcThreshold, callback) {
-    var params = [GcThreshold];    
-    execSQL("DELETE FROM  `" + module.exports.presenceConfig.scpDbTablename + "`  WHERE SCP_updated < DATE_ADD(NOW(), INTERVAL -? SECOND);", connection, params, callback);
+    var params = [GcThreshold];
+    execSQL("DELETE FROM  " + module.exports.presenceConfig.scpDbTablename + "  WHERE SCP_updated < DATE_ADD(NOW(), INTERVAL -$1 SECOND);", connection, params, callback);
 }
 
 
@@ -151,19 +147,22 @@ module.exports.presenceGC = function (connection, GcThreshold, callback) {
 
 function execSQL(sql, connection, params, callback) {
     try {
-        connection.query(sql, params, function (err, rows, fields) {
+        connection.query(sql, params, function (err, result) {
+            console.log('result', result);
             if (typeof callback === 'function') {
-                if (err) {                    
+                if (err) {
                     callback(err, {});
                 } else {
-                    if (rows.length > 0) {
-                        callback(null, rows);
+                    if (result.length > 0) {
+                        callback(null, result);
                     } else {
                         callback(null, {});
                     }
                 }
             }
         });
-    } catch (ex) { console.log(ex); }
+    } catch (ex) {
+        console.log('ex', ex);
+    }
 
 }
