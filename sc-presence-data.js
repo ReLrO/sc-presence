@@ -2,6 +2,7 @@
 ﻿module.exports.presenceConfig;
 
 module.exports.insertUserChannel = function (connection, socket, channel, callback) {
+
     if (socket.state == "open" && channel && channel.toLowerCase() !== '_scpresence') {
         var user_id = null;
         var user_authToken = null;
@@ -12,20 +13,19 @@ module.exports.insertUserChannel = function (connection, socket, channel, callba
                 user_id = authToken[module.exports.presenceConfig.scpUserIdField];
                 user_authToken = JSON.stringify(authToken);
         }
-        var insertParams = [
-             socket.id
-            ,user_id
-            ,channel
-            ,user_authToken
-            ,socket.remoteAddress
-            ,socket.request.headers.origin
-        ];
+        if (user_id) {
+          var insertParams = [
+               socket.id
+              ,user_id
+              ,channel
+              ,user_authToken
+              ,socket.remoteAddress
+              ,socket.request.headers.origin
+          ];
 
-
-        execSQL("INSERT INTO " + module.exports.presenceConfig.scpDbTablename + " (SCP_socket_id, SCP_user_id, SCP_channel, SCP_authToken, SCP_ip, SCP_origin, SCP_updated) " +
-                "VALUES($1, $2, $3, $4, $5, $6, NOW()) ON CONFLICT (SCP_user_id, SCP_channel) DO UPDATE SET SCP_socket_id = $1, SCP_authToken = $4, SCP_ip = $5, SCP_origin=$6, SCP_user_id=$2", connection, insertParams, callback);
-
-
+          execSQL("INSERT INTO " + module.exports.presenceConfig.scpDbTablename + " (SCP_socket_id, SCP_user_id, SCP_channel, SCP_authToken, SCP_ip, SCP_origin, SCP_updated) " +
+                  "VALUES($1, $2, $3, $4, $5, $6, NOW()) ON CONFLICT (SCP_user_id, SCP_channel) DO UPDATE SET SCP_socket_id = $1, SCP_authToken = $4, SCP_ip = $5, SCP_origin=$6, SCP_user_id=$2", connection, insertParams, callback);
+        }
 
     }
 }
